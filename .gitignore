@@ -1,0 +1,36 @@
+# Environment variables & secrets
+.env
+.env.local
+*.env
+keys.json
+.encrypted_keys.json
+credentials.json
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Media outputs, uploads & test artifacts
+output/
+uploads/
+extracted_frames/
+test_out/
+test_audio_scratch/
+*.mp4
+*.mp3
+*.wav
+*.pptx
+*.pdf
+
+# IDE & OS system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

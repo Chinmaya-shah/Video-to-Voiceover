@@ -1,0 +1,73 @@
+{
+  "slides_ocr": [
+    {
+      "slide_id": 1,
+      "title": "NAVIK LABS",
+      "headings": [
+        "PITCH DECK"
+      ],
+      "bullets": [
+        "Automated Video-to-Voiceover Agent",
+        "Transforming raw video walkthroughs into narrated executive media:",
+        "Automated slide detection and visual scene analysis",
+        "Natural voiceover script generation via Al browser agent",
+        "High-fidelity TTS synthesis using ElevenLabs API",
+        "Burned-in transcript subtitles & video assembly"
+      ],
+      "numbers_metrics": [],
+      "full_text": "NAVIK LABS\nPITCH DECK\nAutomated Video-to-Voiceover Agent\nTransforming raw video walkthroughs into narrated executive media:\nAutomated slide detection and visual scene analysis\nNatural voiceover script generation via Al browser agent\nHigh-fidelity TTS synthesis using ElevenLabs API\nBurned-in transcript subtitles & video assembly"
+    },
+    {
+      "slide_id": 2,
+      "title": "NAVIK LABS",
+      "headings": [
+        "PITCH DECK"
+      ],
+      "bullets": [
+        "The Problem in Video Marketing",
+        "Creating narrated pitch videos is time-consuming and expensive",
+        "Manual script writing takes hours per presentation",
+        "Voiceover recording requires quiet studios & equipment",
+        "Video editing and subtitle syncing creates bottlenecks",
+        "Scaling content across multiple products is challenging"
+      ],
+      "numbers_metrics": [],
+      "full_text": "NAVIK LABS\nPITCH DECK\nThe Problem in Video Marketing\nCreating narrated pitch videos is time-consuming and expensive\nManual script writing takes hours per presentation\nVoiceover recording requires quiet studios & equipment\nVideo editing and subtitle syncing creates bottlenecks\nScaling content across multiple products is challenging"
+    },
+    {
+      "slide_id": 3,
+      "title": "NAVIK LABS",
+      "headings": [
+        "PITCH DECK"
+      ],
+      "bullets": [
+        "Architecture: Browser Agent + ElevenLabs",
+        "A 3-Phase end-to-end pipeline built for speed and precision:",
+        "Phase 1: Browser-use frame capture & multimodal script synthesis",
+        "Phase 2: ElevenLabs neural voice generator with custom voices",
+        "Phase 3: FFmpeg compositing for audio sync and burned-in subtitles",
+        "FastAPI orchestration backend with interactive Web UI"
+      ],
+      "numbers_metrics": [],
+      "full_text": "NAVIK LABS\nPITCH DECK\nArchitecture: Browser Agent + ElevenLabs\nA 3-Phase end-to-end pipeline built for speed and precision:\nPhase 1: Browser-use frame capture & multimodal script synthesis\nPhase 2: ElevenLabs neural voice generator with custom voices\nPhase 3: FFmpeg compositing for audio sync and burned-in subtitles\nFastAPI orchestration backend with interactive Web UI"
+    },
+    {
+      "slide_id": 4,
+      "title": "NAVIK LABS",
+      "headings": [
+        "PITCH DECK"
+      ],
+      "bullets": [
+        "Navik Labs",
+        "Next Generation Al",
+        "Empowering businesses with intelligent media agents.",
+        "Ready for production deployment and SaaS wrapper",
+        "Instant turnaround for pitch decks and feature walkthroughs",
+        "Enterprise voice customization and multi-language support",
+        "Thank youl Contact us at team@naviklabs.ai"
+      ],
+      "numbers_metrics": [],
+      "full_text": "NAVIK LABS\nPITCH DECK\nNavik Labs\nNext Generation Al\nEmpowering businesses with intelligent media agents.\nReady for production deployment and SaaS wrapper\nInstant turnaround for pitch decks and feature walkthroughs\nEnterprise voice customization and multi-language support\nThank youl Contact us at team@naviklabs.ai"
+    }
+  ]
+}

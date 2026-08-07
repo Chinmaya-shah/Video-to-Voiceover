@@ -1,0 +1,76 @@
+{
+  "slides_vision": [
+    {
+      "slide_id": 1,
+      "detected_objects": [
+        {
+          "object_type": "presentation_slide",
+          "description": "Executive Pitch Deck Slide Layout",
+          "confidence": 0.95,
+          "bbox": null
+        }
+      ],
+      "chart_summary": "",
+      "ui_elements": [],
+      "brand_identity": "Modern Tech SaaS Dark Mode Aesthetic with Cyan Highlights",
+      "visual_summary": "Slide 1 visual presentation featuring presentation_slide"
+    },
+    {
+      "slide_id": 2,
+      "detected_objects": [
+        {
+          "object_type": "UI",
+          "description": "Product UI Interface Screenshot / Mobile App View",
+          "confidence": 0.94,
+          "bbox": null
+        }
+      ],
+      "chart_summary": "",
+      "ui_elements": [
+        "Interactive Dashboard Header, Action Controls, & Analytical Metrics Cards"
+      ],
+      "brand_identity": "Modern Tech SaaS Dark Mode Aesthetic with Cyan Highlights",
+      "visual_summary": "Slide 2 visual presentation featuring UI"
+    },
+    {
+      "slide_id": 3,
+      "detected_objects": [
+        {
+          "object_type": "flowchart",
+          "description": "Technical System Architecture / Process Flowchart",
+          "confidence": 0.88,
+          "bbox": null
+        },
+        {
+          "object_type": "UI",
+          "description": "Product UI Interface Screenshot / Mobile App View",
+          "confidence": 0.94,
+          "bbox": null
+        }
+      ],
+      "chart_summary": "",
+      "ui_elements": [
+        "Interactive Dashboard Header, Action Controls, & Analytical Metrics Cards"
+      ],
+      "brand_identity": "Modern Tech SaaS Dark Mode Aesthetic with Cyan Highlights",
+      "visual_summary": "Slide 3 visual presentation featuring flowchart, UI"
+    },
+    {
+      "slide_id": 4,
+      "detected_objects": [
+        {
+          "object_type": "UI",
+          "description": "Product UI Interface Screenshot / Mobile App View",
+          "confidence": 0.94,
+          "bbox": null
+        }
+      ],
+      "chart_summary": "",
+      "ui_elements": [
+        "Interactive Dashboard Header, Action Controls, & Analytical Metrics Cards"
+      ],
+      "brand_identity": "Modern Tech SaaS Dark Mode Aesthetic with Cyan Highlights",
+      "visual_summary": "Slide 4 visual presentation featuring UI"
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navik Voiceover — AI Video Narrator</title>
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="saas-theme">
+
+    <!-- Top SaaS Navigation -->
+    <header class="navbar">
+        <div class="nav-brand">
+            <div class="brand-logo">
+                <i class="fa-solid fa-play"></i>
+            </div>
+            <div class="brand-name">
+                <span class="brand-title">Navik Voiceover</span>
+                <span class="brand-tag">AI Pipeline</span>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+            <button class="btn btn-outline" id="open-settings-btn">
+                <i class="fa-solid fa-sliders"></i> API Keys
+            </button>
+            <button class="btn btn-primary" id="run-full-pipeline-btn">
+                <i class="fa-solid fa-bolt"></i> Generate Full Video
+            </button>
+        </div>
+    </header>
+
+    <!-- App Main Container -->
+    <main class="main-container">
+        
+        <!-- Hero Header & Status -->
+        <section class="hero-section">
+            <h1 class="hero-title">Turn any video into a narrated video in seconds.</h1>
+            <p class="hero-subtitle">Upload your slide walkthrough or explainer video. Our AI generates a natural script, synthesizes voiceover audio, and stitches burned-in subtitles.</p>
+            
+            <div class="pipeline-stepper">
+                <div class="step-badge active" id="step-1">
+                    <span class="step-num">1</span> Video Upload
+                </div>
+                <i class="fa-solid fa-chevron-right step-arrow"></i>
+                <div class="step-badge" id="step-2">
+                    <span class="step-num">2</span> Script & Voice
+                </div>
+                <i class="fa-solid fa-chevron-right step-arrow"></i>
+                <div class="step-badge" id="step-3">
+                    <span class="step-num">3</span> Export Video
+                </div>
+            </div>
+
+            <!-- Progress Notification -->
+            <div class="status-banner" id="status-banner">
+                <i class="fa-solid fa-circle-info status-icon"></i>
+                <span id="status-message-text">Ready. Upload your pitch deck video to extract slide-wise scripts.</span>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2-Column SaaS Grid -->
+        <div class="saas-grid">
+            
+            <!-- Left Side: Source Video Player & Metadata -->
+            <div class="grid-column">
+                
+                <!-- Card 1: Input Video Selection -->
+                <div class="saas-card">
+                    <div class="card-header">
+                        <span class="card-step-tag">Step 1</span>
+                        <h2 class="card-heading">Upload Pitch Deck (.pptx, .pdf) or Video</h2>
+                    </div>
+
+                    <div class="dropzone" id="dropzone" style="position: relative; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 180px; border: 2px dashed rgba(56, 189, 248, 0.4); border-radius: 12px; background: rgba(56, 189, 248, 0.03); padding: 24px;">
+                        <input type="file" id="video-file-input" accept=".pptx,.pdf,.docx,video/mp4,video/webm,video/quicktime" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 20;">
+                        <div class="dropzone-icon" style="pointer-events: none;">
+                            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.5rem; color: #38bdf8; margin-bottom: 12px;"></i>
+                        </div>
+                        <p class="dropzone-title" id="dropzone-display-title" style="font-size: 1.1rem; font-weight: 600; color: #f8fafc; margin-bottom: 6px; pointer-events: none;">Upload Pitch Deck (.pptx, .pdf) or Video (.mp4)</p>
+                        <p class="dropzone-sub" id="dropzone-display-sub" style="font-size: 0.88rem; color: #94a3b8; pointer-events: none;">Click anywhere or drag & drop deck file / video</p>
+                    </div>
+                </div>
+
+                <!-- Card 2: Video Player -->
+                <div class="saas-card">
+                    <div class="card-header flex-between">
+                        <h2 class="card-heading"><i class="fa-solid fa-film"></i> Video Walkthrough Preview</h2>
+                        <span class="badge-pill" id="video-meta-badge">00:00</span>
+                    </div>
+
+                    <div class="video-wrapper">
+                        <video id="original-video-player" controls preload="metadata" class="video-frame active" style="width: 100%;">
+                        </video>
+                    </div>
+                </div>
+
+                <!-- Card 2.5: Final Output Narrated Video Player & Download -->
+                <div class="saas-card hidden" id="output-video-card" style="margin-top: 16px;">
+                    <div class="card-header flex-between">
+                        <h2 class="card-heading"><i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Final Narrated Executive Video</h2>
+                        <a id="download-video-btn" href="#" download class="btn btn-secondary hidden" style="padding: 6px 12px; font-size: 0.85rem; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; font-weight: 600;">
+                            <i class="fa-solid fa-download"></i> Download MP4
+                        </a>
+                    </div>
+
+                    <div class="video-wrapper">
+                        <video id="output-video-player" controls preload="metadata" class="video-frame" style="width: 100%; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        </video>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Side: Slide Script Generation & Web Enrichment -->
+            <div class="grid-column">
+                
+                <!-- Card 3: Action Button & Voicebox Voice Selector -->
+                <div class="saas-card">
+                    <div class="card-header flex-between">
+                        <span class="card-step-tag">Step 2</span>
+                        <h2 class="card-heading">Voicebox Neural Engine & Script</h2>
+                    </div>
+
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px;">
+                        Select your preferred ultra-realistic Voicebox narrator and click <b>'Listen to Voice Sample'</b> to hear a live audio preview.
+                    </p>
+
+                    <!-- Voicebox Voice Selector with Sample Preview Button -->
+                    <div class="voice-selector-box" style="background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 10px; border: 1px solid rgba(56, 189, 248, 0.2); margin-bottom: 16px;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #38bdf8; margin-bottom: 8px;">
+                            🎙️ Select Voicebox Narrator Voice:
+                        </label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="voice-select" class="form-input" style="flex: 1; padding: 10px; border-radius: 8px; background: #0f172a; color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); font-weight: 500;">
+                                <option value="kokoro-af_heart">Heart — Voicebox Kokoro (US Female, Ultra-Realistic)</option>
+                                <option value="kokoro-am_adam" selected>Adam — Voicebox Kokoro (US Male, Ultra-Realistic)</option>
+                                <option value="kokoro-af_bella">Bella — Voicebox Kokoro (US Female, Ultra-Realistic)</option>
+                                <option value="kokoro-am_michael">Michael — Voicebox Kokoro (US Male, Ultra-Realistic)</option>
+                                <option value="kokoro-bf_emma">Emma — Voicebox Kokoro (UK Female, Ultra-Realistic)</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary" id="btn-play-voice-sample" style="padding: 10px 16px; font-size: 0.9rem; white-space: nowrap; background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8;">
+                                <i class="fa-solid fa-volume-high" id="sample-play-icon"></i> <span id="sample-play-text">Listen to Sample</span>
+                            </button>
+                        </div>
+                        <audio id="voice-sample-audio-player" style="display: none;"></audio>
+                        <span id="sample-status-text" style="display: block; margin-top: 6px; font-size: 0.8rem; color: #94a3b8;"></span>
+                    </div>
+
+                    <div class="action-grid">
+                        <button class="btn btn-primary" id="btn-run-phase1" style="grid-column: span 3; font-size: 1rem; padding: 14px 20px;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Founder Pitch Script (Web Enriched)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 5: Script Editor -->
+                <div class="saas-card">
+                    <div class="card-header flex-between">
+                        <h2 class="card-heading">Generated Script</h2>
+                        <span class="count-pill" id="segment-count-badge">0 Segments</span>
+                    </div>
+
+                    <div class="script-container" id="script-list-container">
+                        <div class="empty-placeholder">
+                            <i class="fa-solid fa-align-left empty-icon"></i>
+                            <p class="empty-title">No script generated yet</p>
+                            <p class="empty-desc">Click 'Generate Founder Pitch Script' to analyze your pitch deck or video.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 6: Voiceover Audio Generation Section -->
+                <div class="saas-card" style="margin-top: 16px;">
+                    <div class="card-header flex-between">
+                        <span class="card-step-tag">Step 3</span>
+                        <h2 class="card-heading">Synthesize Voiceover Audio</h2>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 14px;">
+                        Convert the presentation script above into ultra-realistic Voicebox human speech.
+                    </p>
+                    <button class="btn btn-primary" id="btn-run-phase2" style="width: 100%; font-size: 1rem; padding: 14px 20px; background: linear-gradient(135deg, #0ea5e9, #0284c7);">
+                        <i class="fa-solid fa-microphone-lines"></i> 1. Generate Voiceover Audio Track
+                    </button>
+                </div>
+
+                <!-- Card 7: Synthesized Voiceover Audio Preview Card -->
+                <div class="saas-card hidden" id="audio-preview-card" style="margin-top: 16px;">
+                    <div class="card-header flex-between">
+                        <h2 class="card-heading"><i class="fa-solid fa-headphones"></i> Voiceover Track Preview</h2>
+                        <span class="badge-pill" id="voice-engine-badge" style="background: rgba(56,189,248,0.15); color:#38bdf8;">Voicebox Kokoro</span>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.6); padding: 14px; border-radius: 10px; border: 1px solid rgba(56, 189, 248, 0.2);">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: #38bdf8; margin-bottom: 8px;">
+                            ▶ Play Synthesized Voiceover Track:
+                        </label>
+                        <audio id="audio-player" controls style="width: 100%; border-radius: 8px;"></audio>
+                    </div>
+                </div>
+
+                <!-- Card 8: Add Voiceover to Video & Export Section -->
+                <div class="saas-card" style="margin-top: 16px;">
+                    <div class="card-header flex-between">
+                        <span class="card-step-tag">Step 4</span>
+                        <h2 class="card-heading">Add Voiceover to Video</h2>
+                    </div>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 14px;">
+                        Stitch the synthesized voiceover track into your video/slides and burn in subtitle overlays.
+                    </p>
+                    <button class="btn btn-success" id="btn-run-phase3" style="width: 100%; font-size: 1.05rem; padding: 14px 20px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; font-weight: 700;">
+                        <i class="fa-solid fa-film"></i> 2. Add Voiceover to Video & Export Final MP4
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Simple Settings Modal -->
+    <div class="modal-overlay hidden" id="settings-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>API Keys & Credentials</h3>
+                <button class="modal-close-btn" id="close-settings-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="settings-status-badge" class="form-help" style="margin-bottom: 12px; color: var(--accent-emerald); font-weight: 600;"></div>
+                <div class="form-row">
+                    <label class="form-label" for="input-elevenlabs-key">ElevenLabs API Key</label>
+                    <input type="password" id="input-elevenlabs-key" class="form-input" placeholder="xi-api-key-...">
+                    <span class="form-help" id="elevenlabs-help-text">Keys are encrypted with a machine key and persisted safely on disk.</span>
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label" for="input-gemini-key">Gemini API Key <span style="font-size:11px;opacity:0.7;">(Primary vision AI)</span></label>
+                    <input type="password" id="input-gemini-key" class="form-input" placeholder="AIzaSy...">
+                    <span class="form-help" id="gemini-help-text">Keys are encrypted with a machine key and persisted safely on disk.</span>
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label" for="input-groq-key">Groq API Key <span style="font-size:11px;color:#a78bfa;">✦ Free — No credit card required</span></label>
+                    <input type="password" id="input-groq-key" class="form-input" placeholder="gsk_...">
+                    <span class="form-help" id="groq-help-text">Used as a free fallback when Gemini quota is exhausted. Get yours at <a href="https://console.groq.com/keys" target="_blank" style="color:#a78bfa;">console.groq.com/keys</a></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="save-settings-btn">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Notification Modal -->
+    <div class="modal-overlay hidden" id="error-modal">
+        <div class="modal-card" style="border-top: 4px solid var(--accent-rose, #f43f5e);">
+            <div class="modal-header">
+                <h3 style="color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i> API Error Notification</h3>
+                <button class="modal-close-btn" id="close-error-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="error-modal-message" style="font-size: 0.95rem; line-height: 1.5; color: var(--text-secondary); white-space: pre-wrap;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="error-open-keys-btn"><i class="fa-solid fa-sliders"></i> Open API Settings</button>
+                <button class="btn btn-primary" id="error-dismiss-btn">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
