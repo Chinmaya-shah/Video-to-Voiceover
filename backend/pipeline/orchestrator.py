@@ -100,12 +100,13 @@ class MasterPipelineOrchestrator:
         rel_video_url = f"/output/tasks/{task_id}/final_narrated_presentation.mp4"
         rel_audio_url = f"/output/tasks/{task_id}/combined_voiceover.mp3"
 
+        k_map = {s.slide_id: s for s in knowledge_contract.slides}
         script_list = [
             {
                 "segment_id": s.slide_id,
                 "start_time": s.start_time,
                 "end_time": s.end_time,
-                "slide_title": f"Slide {s.slide_id}",
+                "slide_title": (k_map[s.slide_id].slide_summary[:40] if s.slide_id in k_map and k_map[s.slide_id].slide_summary else f"Slide {s.slide_id}"),
                 "narration": s.narration_text
             }
             for s in script_contract.slides
