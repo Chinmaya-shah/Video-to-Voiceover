@@ -182,9 +182,7 @@ async def upload_video(file: UploadFile = File(...)):
         "url": web_url
     }
 
-# In-memory store for chunked uploads
-_chunk_store: Dict[str, Any] = {}
-
+# Disk-streaming for chunked uploads (prevents RAM spikes & 502 Bad Gateway OOM errors)
 @app.post("/api/upload/chunk")
 async def upload_chunk(
     file: UploadFile = File(...),
@@ -193,12 +191,13 @@ async def upload_chunk(
     total_chunks: int = Form(...),
     filename: str = Form(...)
 ):
-    """Receive a single chunk of a large file upload."""
-    chunk_data = await file.read()
-    if upload_id not in _chunk_store:
-        _chunk_store[upload_id] = {"chunks": {}, "filename": filename, "total": total_chunks}
-    _chunk_store[upload_id]["chunks"][chunk_index] = chunk_data
-    return {"status": "ok", "chunk": chunk_index, "received": len(_chunk_store[upload_id]["chunks"])}
+    """Stream a single chunk directly to a temporary file on disk."""
+    temp_path = UPLOADS_DIR / f"temp_{upload_id}.part"
+    chunk_bytes = await file.read()
+    with open(temp_path, "ab") as f:
+        f.write(chunk_bytes)
+    del chunk_bytes
+    return {"status": "ok", "chunk": chunk_index}
 
 @app.post("/api/upload/finalize")
 async def finalize_chunked_upload(
@@ -208,23 +207,27 @@ async def finalize_chunked_upload(
     total_chunks: int = Form(...),
     filename: str = Form(...)
 ):
-    """Receive the final chunk, reassemble, and process like a normal upload."""
-    chunk_data = await file.read()
-    if upload_id not in _chunk_store:
-        _chunk_store[upload_id] = {"chunks": {}, "filename": filename, "total": total_chunks}
-    _chunk_store[upload_id]["chunks"][chunk_index] = chunk_data
+    """Write the final chunk to disk, assemble destination file, and return response."""
+    temp_path = UPLOADS_DIR / f"temp_{upload_id}.part"
+    chunk_bytes = await file.read()
+    with open(temp_path, "ab") as f:
+        f.write(chunk_bytes)
+    del chunk_bytes
 
-    store = _chunk_store.pop(upload_id)
     ext = Path(filename).suffix.lower() or ".mp4"
     valid_exts = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".pptx", ".ppt", ".pdf", ".docx"]
     if ext not in valid_exts:
+        if temp_path.exists():
+            temp_path.unlink()
         raise HTTPException(status_code=400, detail="Invalid file format.")
 
     file_id = f"file_{uuid.uuid4().hex[:8]}"
     dest_path = UPLOADS_DIR / f"{file_id}{ext}"
-    with open(dest_path, "wb") as f:
-        for i in range(store["total"]):
-            f.write(store["chunks"][i])
+
+    if temp_path.exists():
+        temp_path.rename(dest_path)
+    else:
+        raise HTTPException(status_code=400, detail="Upload chunks missing or incomplete.")
 
     final_video_path = str(dest_path)
     web_url = f"{BACKEND_URL}/uploads/{file_id}{ext}" if BACKEND_URL else f"/uploads/{file_id}{ext}"
