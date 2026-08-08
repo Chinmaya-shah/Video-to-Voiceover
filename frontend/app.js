@@ -1,5 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // =============================================================
+    // BACKEND URL — points to Render backend
+    // When running locally: leave as empty string (uses same origin)
+    // When deployed: set to your Render URL, e.g.:
+    //   const BACKEND_URL = "https://navik-voiceover.onrender.com";
+    // =============================================================
+    const BACKEND_URL = window.NAVIK_BACKEND_URL || "";
+
+    function api(path) {
+        return BACKEND_URL + path;
+    }
+
     // Application State
     let currentVideoPath = "/samples/sample_pitch_deck.mp4";
     let currentScriptSegments = [];
@@ -63,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load available voices from backend with sample preview URLs
     async function loadVoices() {
         try {
-            const res = await fetch('/api/voices');
+            const res = await fetch(api('/api/voices'));
             const data = await res.json();
             if (data.voices && data.voices.length > 0) {
                 availableVoices = data.voices;
@@ -129,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load persisted encrypted key status on startup
     async function loadSavedKeyStatus() {
         try {
-            const res = await fetch('/api/settings/get-keys');
+            const res = await fetch(api('/api/settings/get-keys'));
             const data = await res.json();
 
             if (data.has_elevenlabs && inputElevenLabsKey) {
@@ -183,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const groqApiKey = inputGroqKey ? inputGroqKey.value.trim() : '';
 
             try {
-                const res = await fetch('/api/settings/save-keys', {
+                const res = await fetch(api('/api/settings/save-keys'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -270,37 +282,83 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleEl = document.getElementById('dropzone-display-title');
         const subEl = document.getElementById('dropzone-display-sub');
         if (titleEl) titleEl.innerText = `Uploading ${file.name}...`;
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        updateStatus(`Uploading ${file.name}...`, 15);
+        updateStatus(`Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)...`, 10);
 
         try {
-            const res = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                const errMsg = data.detail || data.error || "Failed to upload video.";
-                showErrorModal(errMsg);
-                updateStatus("Upload failed: " + errMsg, 0);
-                if (titleEl) titleEl.innerText = "Upload Pitch Deck (.pptx, .pdf) or Video (.mp4)";
+            // Chunked XHR upload — works for files of any size
+            const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB per chunk
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+            // For files under 50 MB, use simple FormData upload
+            if (file.size <= 50 * 1024 * 1024) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const res = await fetch(api('/api/upload'), {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    const errMsg = data.detail || data.error || "Failed to upload file.";
+                    showErrorModal(errMsg);
+                    updateStatus("Upload failed: " + errMsg, 0);
+                    if (titleEl) titleEl.innerText = "Upload Pitch Deck (.pptx, .pdf) or Video (.mp4)";
+                    return;
+                }
+                _applyUploadResult(data, file.name, titleEl, subEl);
                 return;
             }
-            currentVideoPath = data.video_path;
-            if (origPlayer) {
-                origPlayer.src = data.url;
-                origPlayer.load();
+
+            // Large file: chunked XHR with progress
+            const uploadId = 'upload_' + Date.now();
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = file.slice(start, end);
+
+                const percent = Math.round(((i + 1) / totalChunks) * 80);
+                updateStatus(`Uploading ${file.name}: chunk ${i + 1}/${totalChunks} (${(end / 1024 / 1024).toFixed(1)} MB / ${(file.size / 1024 / 1024).toFixed(1)} MB)`, percent);
+
+                const fd = new FormData();
+                fd.append('file', chunk, file.name);
+                fd.append('upload_id', uploadId);
+                fd.append('chunk_index', i);
+                fd.append('total_chunks', totalChunks);
+                fd.append('filename', file.name);
+
+                const endpoint = i === totalChunks - 1 ? '/api/upload/finalize' : '/api/upload/chunk';
+                const res = await fetch(api(endpoint), { method: 'POST', body: fd });
+                const data = await res.json();
+
+                if (!res.ok && i === totalChunks - 1) {
+                    const errMsg = data.detail || data.error || "Failed to finalize upload.";
+                    showErrorModal(errMsg);
+                    updateStatus("Upload failed: " + errMsg, 0);
+                    if (titleEl) titleEl.innerText = "Upload Pitch Deck (.pptx, .pdf) or Video (.mp4)";
+                    return;
+                }
+
+                if (i === totalChunks - 1 && data.video_path) {
+                    _applyUploadResult(data, file.name, titleEl, subEl);
+                }
             }
-            if (titleEl) titleEl.innerText = `✓ File Selected: ${file.name}`;
-            if (subEl) subEl.innerText = `Deck Path: ${data.video_path}`;
-            updateStatus(`Pitch deck '${file.name}' processed successfully. Ready to generate founder pitch script.`, 25);
         } catch (err) {
             showErrorModal("Upload failed: " + err.message);
             updateStatus("Upload failed: " + err.message, 0);
             if (titleEl) titleEl.innerText = "Upload Pitch Deck (.pptx, .pdf) or Video (.mp4)";
         }
+    }
+
+    function _applyUploadResult(data, fileName, titleEl, subEl) {
+        currentVideoPath = data.video_path;
+        if (origPlayer) {
+            origPlayer.src = data.url;
+            origPlayer.load();
+        }
+        if (titleEl) titleEl.innerText = `✓ File Selected: ${fileName}`;
+        if (subEl) subEl.innerText = `Path: ${data.video_path}`;
+        updateStatus(`'${fileName}' uploaded successfully. Ready to generate script.`, 25);
     }
 
     // Status & Step Helpers
@@ -397,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRunPhase1.disabled = true;
 
         try {
-            const { ok, data } = await safeFetchJson('/api/phase1/generate-script', {
+            const { ok, data } = await safeFetchJson(api('/api/phase1/generate-script'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -436,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnRunPhase2.disabled = true;
 
             try {
-                const { ok, data } = await safeFetchJson('/api/phase2/generate-audio', {
+                const { ok, data } = await safeFetchJson(api('/api/phase2/generate-audio'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -454,6 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // Audio URL is already absolute when backend is on Render
                 currentAudioUrl = data.audio_url;
 
                 if (voiceEngineBadge) voiceEngineBadge.innerText = data.engine;
@@ -481,12 +540,15 @@ document.addEventListener('DOMContentLoaded', () => {
             btnRunPhase3.disabled = true;
 
             try {
-                const { ok, data } = await safeFetchJson('/api/phase3/combine-video', {
+                const { ok, data } = await safeFetchJson(api('/api/phase3/combine-video'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         video_path: currentVideoPath,
-                        audio_path: currentAudioUrl ? "." + currentAudioUrl : "output/combined_voiceover.mp3",
+                        // Send absolute audio path to backend (already absolute URL)
+                        audio_path: currentAudioUrl ? 
+                            (currentAudioUrl.startsWith('http') ? currentAudioUrl.replace(BACKEND_URL, '.') : "." + currentAudioUrl) 
+                            : "output/combined_voiceover.mp3",
                         script_segments: currentScriptSegments
                     })
                 });
@@ -499,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 currentOutputVideoUrl = data.video_url;
-
+                // video_url is absolute when backend is on Render
                 const outputVideoCard = document.getElementById('output-video-card');
                 if (outputVideoCard) outputVideoCard.classList.remove('hidden');
 
@@ -535,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnRunFullPipeline.disabled = true;
 
             try {
-                const { ok, data } = await safeFetchJson('/api/pipeline/run-all', {
+                const { ok, data } = await safeFetchJson(api('/api/pipeline/run-all'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -564,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function pollTaskStatus(taskId) {
         const interval = setInterval(async () => {
             try {
-                const res = await fetch(`/api/status/${taskId}`);
+                const res = await fetch(api(`/api/status/${taskId}`));
                 const data = await res.json();
 
                 updateStatus(data.message, data.progress_percent || 0);

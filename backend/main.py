@@ -42,19 +42,33 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"status": "error", "error": err_msg, "detail": err_msg}
     )
 
+# Allow all origins — Vercel frontend URL is set via ALLOWED_ORIGIN env var
+_allowed_origins = ["*"]
+_frontend_origin = os.environ.get("ALLOWED_ORIGIN", "")
+if _frontend_origin:
+    _allowed_origins = [_frontend_origin, "http://localhost:3000", "http://127.0.0.1:5500"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOADS_DIR = BASE_DIR / "uploads"
-OUTPUT_DIR = BASE_DIR / "output"
+
+# Support Render ephemeral filesystem via env vars
+_uploads_env = os.environ.get("UPLOADS_DIR", "")
+_output_env  = os.environ.get("OUTPUT_DIR",  "")
+UPLOADS_DIR = Path(_uploads_env) if _uploads_env else BASE_DIR / "uploads"
+OUTPUT_DIR  = Path(_output_env)  if _output_env  else BASE_DIR / "output"
 SAMPLES_DIR = BASE_DIR / "samples"
 FRONTEND_DIR = BASE_DIR / "frontend"
+
+# BACKEND_URL is set in Render env vars so media URLs are absolute cross-origin
+# e.g. https://navik-voiceover.onrender.com
+BACKEND_URL = os.environ.get("BACKEND_URL", "").rstrip("/")
 
 for d in [UPLOADS_DIR, OUTPUT_DIR, SAMPLES_DIR, FRONTEND_DIR]:
     d.mkdir(parents=True, exist_ok=True)
@@ -128,12 +142,16 @@ async def upload_video(file: UploadFile = File(...)):
     file_id = f"file_{uuid.uuid4().hex[:8]}"
     dest_path = UPLOADS_DIR / f"{file_id}{ext}"
     
+    # Stream-write to disk (avoids loading entire file into RAM)
     with open(dest_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
-        
+        while True:
+            chunk = await file.read(1024 * 1024)  # 1 MB at a time
+            if not chunk:
+                break
+            f.write(chunk)
+
     final_video_path = str(dest_path)
-    web_url = f"/uploads/{file_id}{ext}"
+    web_url = f"{BACKEND_URL}/uploads/{file_id}{ext}" if BACKEND_URL else f"/uploads/{file_id}{ext}"
 
     # If user uploaded a PPTX / PDF document, extract slide images and auto-create baseline MP4 presentation video
     if ext in [".pptx", ".ppt", ".pdf", ".docx"]:
@@ -154,7 +172,7 @@ async def upload_video(file: UploadFile = File(...)):
             mp4_presentation_path = str(UPLOADS_DIR / f"{file_id}_presentation.mp4")
             create_video_from_slide_images(image_paths, mp4_presentation_path, duration_per_slide=6.0)
             final_video_path = mp4_presentation_path
-            web_url = f"/uploads/{file_id}_presentation.mp4"
+            web_url = f"{BACKEND_URL}/uploads/{file_id}_presentation.mp4" if BACKEND_URL else f"/uploads/{file_id}_presentation.mp4"
 
     return {
         "status": "success",
@@ -163,6 +181,73 @@ async def upload_video(file: UploadFile = File(...)):
         "video_path": final_video_path,
         "url": web_url
     }
+
+# In-memory store for chunked uploads
+_chunk_store: Dict[str, Any] = {}
+
+@app.post("/api/upload/chunk")
+async def upload_chunk(
+    file: UploadFile = File(...),
+    upload_id: str = Form(...),
+    chunk_index: int = Form(...),
+    total_chunks: int = Form(...),
+    filename: str = Form(...)
+):
+    """Receive a single chunk of a large file upload."""
+    chunk_data = await file.read()
+    if upload_id not in _chunk_store:
+        _chunk_store[upload_id] = {"chunks": {}, "filename": filename, "total": total_chunks}
+    _chunk_store[upload_id]["chunks"][chunk_index] = chunk_data
+    return {"status": "ok", "chunk": chunk_index, "received": len(_chunk_store[upload_id]["chunks"])}
+
+@app.post("/api/upload/finalize")
+async def finalize_chunked_upload(
+    file: UploadFile = File(...),
+    upload_id: str = Form(...),
+    chunk_index: int = Form(...),
+    total_chunks: int = Form(...),
+    filename: str = Form(...)
+):
+    """Receive the final chunk, reassemble, and process like a normal upload."""
+    chunk_data = await file.read()
+    if upload_id not in _chunk_store:
+        _chunk_store[upload_id] = {"chunks": {}, "filename": filename, "total": total_chunks}
+    _chunk_store[upload_id]["chunks"][chunk_index] = chunk_data
+
+    store = _chunk_store.pop(upload_id)
+    ext = Path(filename).suffix.lower() or ".mp4"
+    valid_exts = [".mp4", ".webm", ".mov", ".avi", ".mkv", ".pptx", ".ppt", ".pdf", ".docx"]
+    if ext not in valid_exts:
+        raise HTTPException(status_code=400, detail="Invalid file format.")
+
+    file_id = f"file_{uuid.uuid4().hex[:8]}"
+    dest_path = UPLOADS_DIR / f"{file_id}{ext}"
+    with open(dest_path, "wb") as f:
+        for i in range(store["total"]):
+            f.write(store["chunks"][i])
+
+    final_video_path = str(dest_path)
+    web_url = f"{BACKEND_URL}/uploads/{file_id}{ext}" if BACKEND_URL else f"/uploads/{file_id}{ext}"
+
+    if ext in [".pptx", ".ppt", ".pdf", ".docx"]:
+        from backend.pptx_pdf_converter import extract_pptx_slides_and_text, extract_pdf_slides_and_text, create_video_from_slide_images
+        slide_out_dir = UPLOADS_DIR / f"slides_{file_id}"
+        if ext in [".pptx", ".ppt"]:
+            slides = extract_pptx_slides_and_text(str(dest_path), str(slide_out_dir))
+        elif ext == ".pdf":
+            slides = extract_pdf_slides_and_text(str(dest_path), str(slide_out_dir))
+        else:
+            from backend.pptx_pdf_converter import convert_docx_to_images
+            img_paths = convert_docx_to_images(str(dest_path), str(slide_out_dir))
+            slides = [{"image_path": p} for p in img_paths]
+        if slides:
+            image_paths = [s["image_path"] for s in slides if "image_path" in s]
+            mp4_path = str(UPLOADS_DIR / f"{file_id}_presentation.mp4")
+            create_video_from_slide_images(image_paths, mp4_path, duration_per_slide=6.0)
+            final_video_path = mp4_path
+            web_url = f"{BACKEND_URL}/uploads/{file_id}_presentation.mp4" if BACKEND_URL else f"/uploads/{file_id}_presentation.mp4"
+
+    return {"status": "success", "filename": filename, "file_type": ext, "video_path": final_video_path, "url": web_url}
 
 @app.get("/api/sample-video")
 def get_sample_video(deck_id: Optional[int] = 1):
@@ -203,9 +288,12 @@ def phase2_generate_audio(req: GenerateAudioRequest):
         total_video_duration=req.total_video_duration or 0.0
     )
 
-    # Relative web URLs
-    rel_path = Path(result["combined_audio_path"]).relative_to(BASE_DIR)
-    result["audio_url"] = f"/{rel_path.as_posix()}"
+    # Build absolute URL so cross-origin Vercel frontend can play the audio
+    rel_path = Path(result["combined_audio_path"]).relative_to(OUTPUT_DIR.parent if OUTPUT_DIR.parent != BASE_DIR else BASE_DIR)
+    _audio_rel = rel_path.as_posix()
+    if not _audio_rel.startswith("/"):
+        _audio_rel = "/" + _audio_rel
+    result["audio_url"] = f"{BACKEND_URL}{_audio_rel}" if BACKEND_URL else _audio_rel
     return result
 
 @app.post("/api/phase3/combine-video")
@@ -221,7 +309,7 @@ def phase3_combine_video(req: CombineVideoRequest):
         output_path
     )
     
-    result["video_url"] = f"/output/{output_filename}"
+    result["video_url"] = f"{BACKEND_URL}/output/{output_filename}" if BACKEND_URL else f"/output/{output_filename}"
     return result
 
 def run_full_pipeline_background(task_id: str, req: RunPipelineRequest):

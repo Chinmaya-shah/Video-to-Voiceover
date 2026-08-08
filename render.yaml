@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: navik-voiceover-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python startup.py
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PORT
+        value: 10000
+      - key: UPLOADS_DIR
+        value: /tmp/uploads
+      - key: OUTPUT_DIR
+        value: /tmp/output
+      - key: PYTHON_VERSION
+        value: 3.11.0
