@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 import json
 import logging
@@ -22,7 +23,7 @@ from fastapi import Request
 
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("main_server")
 
 cred_manager = CredentialsManager()
